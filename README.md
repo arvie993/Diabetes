@@ -10,5 +10,10 @@ Performed Exploratory Data Analysis to see distributions of the features and sca
 - Ran Logistic, Random Forest and Decision tree algorithms on the data to develop a model. 
 - Tuned the predictive model to reach a 79 percent accuracy on the test dataset.
 
+# Feature Importance
+Feature importance visualizations to highlight the important features that affect the outcome/diagnosis.
+![image](https://user-images.githubusercontent.com/72575271/109399261-c9150380-790f-11eb-9adb-a78283227963.png)
+
+
 # Summary
 Ran various models to see its accuracy and found random forest algorithm to be the best performer. Some additional insights include finding out the most important features that affect a positive diagnosis of diabetes which in this case it was Glucose and BMI feature.
