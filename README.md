@@ -1,4 +1,5 @@
-# Diabetes
+# Diabetes Prediction
+![image](https://user-images.githubusercontent.com/72575271/109398919-a2ee6400-790d-11eb-95c0-f51c5afae9e9.png)
 The purpose of the project is to solve a classification problem. Does a patient have diabetes based on the input variables?
 
 # Exploratory Data Analysis
