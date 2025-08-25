@@ -19,4 +19,4 @@ Feature importance visualizations to highlight the important features that affec
 Ran various models to see its accuracy and found random forest algorithm to be the best performer. Some additional insights include finding out the most important features that affect a positive diagnosis of diabetes which in this case it was Glucose and BMI feature.
 
 # Sponsor
-Please feel free to donate to this link: 
+Please feel free to donate to this link: www.
