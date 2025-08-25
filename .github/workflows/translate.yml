@@ -1,6 +1,7 @@
+---
 name: Translate README → Spanish (no API key)
 
-on:
+"on":
   push:
     paths:
       - README.md
@@ -42,7 +43,8 @@ jobs:
 
           # Make sure EN->ES package is installed
           available = package.get_available_packages()
-          pkg = next((p for p in available if p.from_code == "en" and p.to_code == "es"), None)
+          pkg = next((p for p in available
+                      if p.from_code == "en" and p.to_code == "es"), None)
           if pkg:
             package.install_from_path(pkg.download())
 
@@ -96,7 +98,8 @@ jobs:
           banner = textwrap.dedent("""\
           <!--
           ⚠️ Generado automáticamente.
-          Este archivo (README.es.md) se produce a partir de README.md por un flujo de trabajo de GitHub Actions.
+          Este archivo (README.es.md) se produce a partir de README.md
+          por un flujo de trabajo de GitHub Actions.
           Los cambios directos aquí podrían sobrescribirse.
           -->
           """)
@@ -112,7 +115,8 @@ jobs:
           branch: ci/translate-readme
           title: "Auto-translate README → Spanish (no API key)"
           body: |
-            This PR updates **README.es.md** from **README.md** using Argos Translate (open-source, no API key).
+            This PR updates **README.es.md** from **README.md** using
+            Argos Translate (open-source, no API key).
             - Source: README.md
             - Target: README.es.md
             - Translator: Argos (OPUS-MT)
