@@ -1,4 +1,4 @@
-name: Translate README → Spanish
+name: Translate README → Spanish (no API key)
 
 on:
   push:
@@ -22,91 +22,99 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Translate README to Spanish
-        env:
-          # Optional: provide your own LibreTranslate instance/key for reliability.
-          # Add in repo Settings → Secrets and variables → Actions → New repository secret
-          LT_ENDPOINT: ${{ secrets.LIBRETRANSLATE_ENDPOINT }} # e.g., https://libretranslate.yourdomain.com/translate
-          LT_API_KEY: ${{ secrets.LIBRETRANSLATE_API_KEY }}
+      - name: Install translator (Argos Translate)
+        run: |
+          python -m pip install --upgrade pip
+          pip install "argostranslate==1.9.6"
+
+      - name: Translate README to Spanish (offline)
         run: |
           python - <<'PY'
-          import os, json, textwrap, sys, pathlib, time
-          import urllib.request
+          import pathlib, sys, textwrap, re
+          from argostranslate import package, translate
 
-          SRC_FILE = "README.md"
-          OUT_FILE = "README.es.md"
+          SRC = pathlib.Path("README.md")
+          OUT = pathlib.Path("README.es.md")
 
-          if not pathlib.Path(SRC_FILE).exists():
-            print(f"{SRC_FILE} not found", file=sys.stderr)
+          if not SRC.exists():
+            print("README.md not found", file=sys.stderr)
             sys.exit(1)
 
-          text = pathlib.Path(SRC_FILE).read_text(encoding="utf-8")
+          # Make sure EN->ES package is installed
+          available = package.get_available_packages()
+          pkg = next((p for p in available if p.from_code == "en" and p.to_code == "es"), None)
+          if pkg:
+            package.install_from_path(pkg.download())
 
-          endpoint = os.environ.get("LT_ENDPOINT") or "https://libretranslate.com/translate"
-          api_key  = os.environ.get("LT_API_KEY")  or None
+          # Fallback if the model is already present (no-op) or installed above
+          translate.load_installed_packages()
+          translator = translate.get_translation("en", "es")
 
-          # Simple chunker to avoid payload limits (aim for ~3500 chars per request)
-          def chunk(s, n=3500):
-            buf, size = [], 0
-            for line in s.splitlines(keepends=True):
-              if size + len(line) > n and buf:
-                yield "".join(buf)
-                buf, size = [line], len(line)
+          text = SRC.read_text(encoding="utf-8")
+
+          # Preserve fenced code blocks: translate only non-code parts
+          # Handles ```lang ... ``` and ~~~ fences.
+          parts = []
+          code = False
+          fence = None
+          for line in text.splitlines(keepends=True):
+            m = re.match(r"^(\s*)(```|~~~)", line)
+            if m:
+              token = m.group(2)
+              if not code:
+                code = True
+                fence = token
+                parts.append(("text", ""))  # ensure segment boundary
+                parts.append(("code", line))
               else:
-                buf.append(line); size += len(line)
-            if buf:
-              yield "".join(buf)
+                # closing fence (treat any fence as close to be robust)
+                code = False
+                fence = None
+                parts.append(("code", line))
+                parts.append(("text", ""))  # boundary
+              continue
+            parts.append(("code" if code else "text", line))
 
-          translated_parts = []
-          for part in chunk(text):
-            data = {
-              "q": part,
-              "source": "auto",     # detect input language
-              "target": "es",       # Spanish
-              "format": "text",     # works well for Markdown; links/code preserved
-            }
-            if api_key:
-              data["api_key"] = api_key
+          # Merge contiguous segments
+          merged = []
+          for kind, line in parts:
+            if merged and merged[-1][0] == kind:
+              merged[-1] = (kind, merged[-1][1] + line)
+            else:
+              merged.append((kind, line))
 
-            req = urllib.request.Request(
-              endpoint,
-              data=json.dumps(data).encode("utf-8"),
-              headers={"Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(req, timeout=60) as r:
-              resp = json.loads(r.read().decode("utf-8"))
-            translated_parts.append(resp["translatedText"])
-            time.sleep(0.8)  # be gentle with public endpoints
+          out_chunks = []
+          for kind, chunk in merged:
+            if kind == "code":
+              out_chunks.append(chunk)  # keep code unchanged
+            else:
+              if chunk.strip():
+                out_chunks.append(translator.translate(chunk))
+              else:
+                out_chunks.append(chunk)
 
           banner = textwrap.dedent("""\
           <!--
-          ⚠️ Auto-generated.
-          This file (README.es.md) is produced by a GitHub Action from README.md.
-          Edits here may be overwritten.
+          ⚠️ Generado automáticamente.
+          Este archivo (README.es.md) se produce a partir de README.md por un flujo de trabajo de GitHub Actions.
+          Los cambios directos aquí podrían sobrescribirse.
           -->
           """)
-          out = banner + "".join(translated_parts)
-          pathlib.Path(OUT_FILE).write_text(out, encoding="utf-8")
-          print(f"Wrote {OUT_FILE}")
+
+          OUT.write_text(banner + "".join(out_chunks), encoding="utf-8")
+          print(f"✅ Wrote {OUT}")
           PY
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
-          commit-message: "chore: update README.es.md (auto-translate)"
+          commit-message: "chore: update README.es.md (offline translation)"
           branch: ci/translate-readme
-          title: "Auto-translate README → Spanish"
+          title: "Auto-translate README → Spanish (no API key)"
           body: |
-            This PR updates **README.es.md** from **README.md** using LibreTranslate.
+            This PR updates **README.es.md** from **README.md** using Argos Translate (open-source, no API key).
             - Source: README.md
             - Target: README.es.md
-            - Provider: ${{ env.LT_ENDPOINT || 'https://libretranslate.com/translate' }}
+            - Translator: Argos (OPUS-MT)
           add-paths: |
             README.es.md
-
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
